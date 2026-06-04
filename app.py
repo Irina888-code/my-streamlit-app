@@ -12,17 +12,23 @@ except ImportError:
 
 st.set_page_config(
     page_title="ИИ-помощник для семейного канала",
-    page_icon="👨‍👩‍",
+    page_icon="👨‍👩‍👧",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+def get_secret(key):
+    """Безопасное получение секрета"""
+    try:
+        return st.secrets.get(key, "")
+    except:
+        return os.getenv(key, "")
 
 CSS_STYLES = """
 <style>
 #MainMenu {visibility: hidden;}
 .stAppDeployButton {display: none;}
 
-/* ГРАДИЕНТНЫЙ ЗАГОЛОВОК */
 .main-title {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
     -webkit-background-clip: text;
@@ -34,7 +40,6 @@ CSS_STYLES = """
     margin-bottom: 10px;
 }   
 
-/* СТИЛЬ ДЛЯ ПОДЗАГОЛОВКА */
 .subtitle {
     text-align: center;
     color: #764ba2;
@@ -58,7 +63,6 @@ CSS_STYLES = """
     font-weight: 500;
 }
 
-/* БОКОВОЕ МЕНЮ С ГРАДИЕНТОМ */
 [data-testid="stSidebar"] {
     background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
 }
@@ -85,13 +89,6 @@ CSS_STYLES = """
 """
 
 st.markdown(CSS_STYLES, unsafe_allow_html=True)
-
-def get_secret(key):
-    """Получить секрет из Streamlit Secrets или из переменных окружения"""
-    try:
-        return st.secrets.get(key, "")
-    except:
-        return os.getenv(key, "")
 
 def build_prompt(topic, platform, tone, temperature, text_length):
     prompt_text = (
@@ -222,7 +219,6 @@ with col2:
 with col3:
     temperature = st.slider("Креативность", 0.1, 1.0, 0.7, 0.1)
 
-# Инициализация text_length по умолчанию
 if "text_length" not in st.session_state:
     st.session_state.text_length = "300-400 слов"
 
@@ -340,7 +336,6 @@ with st.sidebar:
         key="text_length_select"
     )
     
-    # Сохраняем выбранную длину в session_state
     st.session_state.text_length = text_length
     
     st.divider()
@@ -349,14 +344,12 @@ with st.sidebar:
     if os.path.exists("history.csv"):
         try:
             df_history = pd.read_csv("history.csv")
-            # Проверяем, есть ли колонка "Длина", если нет - удаляем файл и создаём заново
             if "Длина" not in df_history.columns:
                 os.remove("history.csv")
                 st.info("🔄 История обновлена (старый формат)")
             else:
                 st.metric("Всего постов", len(df_history))
         except Exception:
-            # Если ошибка чтения - удаляем файл
             os.remove("history.csv")
             st.info("🔄 История обновлена (исправлена ошибка)")
     else:
@@ -373,7 +366,7 @@ with st.sidebar:
             else:
                 st.write("🔄 Обновите историю (сохраните новый пост)")
         except Exception:
-            st.write(" Обновите историю (сохраните новый пост)")
+            st.write("🔄 Обновите историю (сохраните новый пост)")
     else:
         st.write("Нет постов")
     
