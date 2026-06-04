@@ -1,4 +1,3 @@
-
 import streamlit as st
 import requests
 import os
@@ -24,74 +23,168 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-CSS_STYLES = """
-<style>
-#MainMenu {visibility: hidden;}
-.stAppDeployButton {display: none;}
+# Инициализация темы в session_state
+if "theme" not in st.session_state:
+    st.session_state.theme = "light"
 
-/* ГРАДИЕНТНЫЙ ЗАГОЛОВОК */
-.main-title {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    font-size: 3.2em;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 10px;
-}  
+# CSS стили с поддержкой темы
+def get_css_styles(theme):
+    if theme == "dark":
+        return """
+        <style>
+        #MainMenu {visibility: hidden;}
+        .stAppDeployButton {display: none;}
+        
+        /* Тёмная тема */
+        .stApp {
+            background-color: #1a1a2e;
+        }
+        
+        /* ГРАДИЕНТНЫЙ ЗАГОЛОВОК */
+        .main-title {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 3.2em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+        }  
+        
+        /* СТИЛЬ ДЛЯ ПОДЗАГОЛОВКА */
+        .subtitle {
+            text-align: center;
+            color: #a78bfa;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            font-weight: 500;
+        }
+        
+        .post-card {
+            background: #16213e;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            margin: 10px 0;
+            border-left: 5px solid #667eea;
+            color: #e2e8f0;
+        }
+        
+        .stButton>button {
+            border-radius: 10px;
+            font-weight: 500;
+        }
+        
+        /* БОКОВОЕ МЕНЮ С ГРАДИЕНТОМ */
+        [data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+        }
+        [data-testid="stSidebar"] * {
+            color: white !important;
+        }
+        [data-testid="stSidebar"] input,
+        [data-testid="stSidebar"] select,
+        [data-testid="stSidebar"] textarea {
+            color: white !important;
+            background-color: rgba(255,255,255,0.1) !important;
+        }
+        [data-testid="stSidebar"] .stSelectbox > div > div > select {
+            background-color: rgba(255,255,255,0.15) !important;
+            color: white !important;
+        }
+        [data-testid="stSidebar"] .stSlider > div {
+            color: white !important;
+        }
+        .sidebar-header {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        /* Карточки вкладок */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px;
+        }
+        .stTabs [data-baseweb="tab"] {
+            border-radius: 8px;
+            padding: 8px 16px;
+        }
+        </style>
+        """
+    else:
+        return """
+        <style>
+        #MainMenu {visibility: hidden;}
+        .stAppDeployButton {display: none;}
+        
+        /* ГРАДИЕНТНЫЙ ЗАГОЛОВОК */
+        .main-title {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 3.2em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+        }  
+        
+        /* СТИЛЬ ДЛЯ ПОДЗАГОЛОВКА */
+        .subtitle {
+            text-align: center;
+            color: #764ba2;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            font-weight: 500;
+        }
+        
+        .post-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin: 10px 0;
+            border-left: 5px solid #667eea;
+            color: black;
+        }
+        
+        .stButton>button {
+            border-radius: 10px;
+            font-weight: 500;
+        }
+        
+        /* БОКОВОЕ МЕНЮ С ГРАДИЕНТОМ */
+        [data-testid="stSidebar"] {
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+        }
+        [data-testid="stSidebar"] * {
+            color: white !important;
+        }
+        [data-testid="stSidebar"] input,
+        [data-testid="stSidebar"] select,
+        [data-testid="stSidebar"] textarea {
+            color: white !important;
+        }
+        [data-testid="stSidebar"] .stSelectbox > div > div > select {
+            background-color: rgba(255,255,255,0.1) !important;
+            color: white !important;
+        }
+        .sidebar-header {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        </style>
+        """
 
-/* СТИЛЬ ДЛЯ ПОДЗАГОЛОВКА */
-.subtitle {
-    text-align: center;
-    color: #764ba2;
-    font-size: 1.2em;
-    margin-bottom: 30px;
-    font-weight: 500;
-}
-
-.post-card {
-    background: white;
-    border-radius: 15px;
-    padding: 25px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-    margin: 10px 0;
-    border-left: 5px solid #667eea;
-    color: black;
-}
-
-.stButton>button {
-    border-radius: 10px;
-    font-weight: 500;
-}
-
-/* БОКОВОЕ МЕНЮ С ГРАДИЕНТОМ */
-[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-}
-[data-testid="stSidebar"] * {
-    color: white !important;
-}
-[data-testid="stSidebar"] input,
-[data-testid="stSidebar"] select {
-    color: white !important;
-}
-[data-testid="stSidebar"] .stSelectbox > div > div > select {
-    background-color: rgba(255,255,255,0.1) !important;
-    color: white !important;
-}
-.sidebar-header {
-    background: rgba(255,255,255,0.15);
-    color: white;
-    padding: 15px;
-    border-radius: 10px;
-    text-align: center;
-    margin-bottom: 20px;
-}
-</style>
-"""
-
-st.markdown(CSS_STYLES, unsafe_allow_html=True)
+st.markdown(get_css_styles(st.session_state.theme), unsafe_allow_html=True)
 
 def build_prompt(topic, platform, tone, temperature, text_length):
     prompt_text = (
@@ -181,7 +274,7 @@ def save_to_history(topic, platform, tone, text_length, yandex_text, deepseek_te
     else:
         df.to_csv(csv_file, index=False)
 
-st.markdown("<div class='main-title'>👨‍👩‍ ИИ-помощник для семейного канала</div>", unsafe_allow_html=True)
+st.markdown("<div class='main-title'>👨‍👩‍👧 ИИ-помощник для семейного канала</div>", unsafe_allow_html=True)
 st.markdown("<div class='subtitle'>✨ Генерация постов с хештегами и эмодзи через YandexGPT и DeepSeek</div>", unsafe_allow_html=True)
 
 quick_topics = [
@@ -295,57 +388,100 @@ if "yandex_text" in st.session_state:
         )
         st.info(analysis_text)
 
+# УЛУЧШЕННАЯ БОКОВАЯ ПАНЕЛЬ
 with st.sidebar:
-    st.markdown("<div class='sidebar-header'><h2>📋 Меню</h2></div>", unsafe_allow_html=True)
+    st.markdown("<div class='sidebar-header'><h2>⚙️ Настройки</h2></div>", unsafe_allow_html=True)
     
-    st.write("### Настройки")
-    selected_model = st.selectbox("Модель ИИ", ["YandexGPT + DeepSeek", "Только YandexGPT", "Только DeepSeek"], key="model_select")
+    # Выбор темы оформления
+    theme_options = {"🌞 Светлая": "light", "🌙 Тёмная": "dark"}
+    selected_theme = st.selectbox("🎨 Тема оформления", list(theme_options.keys()), index=0 if st.session_state.theme == "light" else 1)
+    if theme_options[selected_theme] != st.session_state.theme:
+        st.session_state.theme = theme_options[selected_theme]
+        st.rerun()
     
-    text_length = st.selectbox("📏 Длина текста", [
-        "Менее 300 слов",
-        "300-400 слов",
-        "500-600 слов",
-        "Более 600 слов"
-    ], key="text_length_select")
+    st.divider()
+    
+    # Настройки генерации
+    st.write("### 📝 Параметры генерации")
+    
+    selected_model = st.radio(
+        "🤖 Модель ИИ",
+        ["Обе модели", "Только YandexGPT", "Только DeepSeek"],
+        index=0,
+        help="Выберите, какие модели будут использоваться для генерации"
+    )
+    
+    text_length = st.select_slider(
+        "📏 Длина текста",
+        options=["Менее 300 слов", "300-400 слов", "500-600 слов", "Более 600 слов"],
+        value=st.session_state.text_length,
+        help="Выберите желаемый объём текста"
+    )
     
     # Сохраняем выбранную длину в session_state
     st.session_state.text_length = text_length
     
-    st.divider()
-    
-    st.write("### Статистика")
-    if os.path.exists("history.csv"):
-        try:
-            df_history = pd.read_csv("history.csv")
-            # Проверяем, есть ли колонка "Длина", если нет - удаляем файл и создаём заново
-            if "Длина" not in df_history.columns:
-                os.remove("history.csv")
-                st.info("🔄 История обновлена (старый формат)")
-            else:
-                st.metric("Всего постов", len(df_history))
-        except Exception:
-            # Если ошибка чтения - удаляем файл
-            os.remove("history.csv")
-            st.info("🔄 История обновлена (исправлена ошибка)")
-    else:
-        st.info("История пуста")
+    # Дополнительные настройки
+    with st.expander("🔧 Дополнительные настройки"):
+        st.caption("Для более точной настройки генерации")
+        use_emojis = st.checkbox("Использовать эмодзи", value=True)
+        use_hashtags = st.checkbox("Добавлять хештеги", value=True)
     
     st.divider()
     
-    st.write("### История")
+    # Статистика
+    st.write("### 📊 Статистика")
     if os.path.exists("history.csv"):
         try:
             df_history = pd.read_csv("history.csv")
             if "Длина" in df_history.columns:
-                st.dataframe(df_history.tail(5), use_container_width=True)
+                col_stat1, col_stat2 = st.columns(2)
+                with col_stat1:
+                    st.metric("Всего постов", len(df_history))
+                with col_stat2:
+                    st.metric("Последний пост", df_history["Дата"].iloc[-1] if len(df_history) > 0 else "—")
             else:
-                st.write("🔄 Обновите историю (сохраните новый пост)")
+                os.remove("history.csv")
+                st.info("🔄 История обновлена (старый формат)")
         except Exception:
-            st.write("🔄 Обновите историю (сохраните новый пост)")
+            if os.path.exists("history.csv"):
+                os.remove("history.csv")
+            st.info("🔄 История пуста")
     else:
-        st.write("Нет постов")
+        st.info("📭 Нет сохранённых постов")
     
     st.divider()
     
-    st.write("### О проекте")
-    st.info("ИИ-помощник для семейного канала. Версия 2.0")
+    # История
+    with st.expander("📜 История постов", expanded=False):
+        if os.path.exists("history.csv"):
+            try:
+                df_history = pd.read_csv("history.csv")
+                if "Длина" in df_history.columns and len(df_history) > 0:
+                    st.dataframe(df_history[["Дата", "Тема", "Платформа"]].tail(5), use_container_width=True)
+                    if st.button("🗑️ Очистить историю", use_container_width=True):
+                        os.remove("history.csv")
+                        st.rerun()
+                else:
+                    st.write("📭 Нет постов в истории")
+            except Exception:
+                st.write("📭 Нет постов в истории")
+        else:
+            st.write("📭 Нет сохранённых постов")
+    
+    st.divider()
+    
+    # О проекте
+    with st.expander("ℹ️ О проекте", expanded=False):
+        st.markdown("""
+        **ИИ-помощник для семейного канала**  
+        Версия 2.1
+        
+        🚀 **Возможности:**
+        - Генерация постов через YandexGPT и DeepSeek
+        - Настройка тона и креативности
+        - Сохранение в Word и историю
+        - Тёмная/светлая тема
+        
+        💡 **Совет:** Экспериментируйте с креативностью для разных форматов постов!
+        """)
