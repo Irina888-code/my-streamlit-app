@@ -18,13 +18,34 @@ st.set_page_config(
 )
 
 def get_api_key(key_name):
-    """Безопасное получение API ключей"""
+    """Безопасное получение API ключей с улучшенной отладкой"""
+    # Пробуем получить из secrets
     try:
-        # Пробуем получить из secrets
-        return st.secrets[key_name]
-    except:
-        # Пробуем из переменных окружения
-        return os.getenv(key_name, "")
+        if key_name in st.secrets:
+            value = st.secrets[key_name]
+            if value and len(str(value)) > 5:
+                return str(value).strip()
+            else:
+                st.warning(f"Ключ {key_name} в secrets пустой или слишком короткий")
+                return ""
+    except Exception as e:
+        st.warning(f"Ошибка доступа к secrets для {key_name}: {e}")
+    
+    # Пробуем из переменных окружения
+    env_value = os.getenv(key_name, "")
+    if env_value:
+        return env_value.strip()
+    
+    return ""
+
+# Отладочная информация (можно удалить после проверки)
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🔍 Отладка")
+try:
+    available_keys = list(st.secrets.keys()) if hasattr(st, 'secrets') else []
+    st.sidebar.write(f"Доступные ключи: {available_keys}")
+except:
+    st.sidebar.write("Secrets не доступны")
 
 CSS_STYLES = """
 <style>
@@ -103,12 +124,15 @@ def call_yandex(prompt):
     api_key = get_api_key("YANDEX_API_KEY")
     folder_id = get_api_key("YANDEX_FOLDER_ID")
     
+    st.sidebar.write(f"Yandex API Key получен: {'Да' if api_key else 'Нет'}, длина: {len(api_key) if api_key else 0}")
+    st.sidebar.write(f"Yandex Folder ID получен: {'Да' if folder_id else 'Нет'}, длина: {len(folder_id) if folder_id else 0}")
+    
     if not api_key or not folder_id:
-        return "⚠️ Не настроен YandexGPT. Добавьте YANDEX_API_KEY и YANDEX_FOLDER_ID в Secrets"
+        return "⚠️ Не настроен YandexGPT. Добавьте YANDEX_API_KEY и YANDEX_FOLDER_ID в Secrets\n\n📝 Инструкция:\n1. В боковой панели нажмите 'Manage app'\n2. Перейдите в раздел 'Secrets'\n3. Добавьте:\n   YANDEX_API_KEY = \"ваш_ключ\"\n   YANDEX_FOLDER_ID = \"ваш_folder_id\""
     
     url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
     headers = {
-        "Authorization": f"Api-Key {api_key}",  # Исправлен формат
+        "Authorization": f"Api-Key {api_key}",
         "x-folder-id": folder_id,
         "Content-Type": "application/json"
     }
@@ -126,20 +150,39 @@ def call_yandex(prompt):
     }
     
     try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=30)
-        resp.raise_for_status()
-        result = resp.json()
-        return result["result"]["alternatives"][0]["message"]["text"]
+        with st.spinner("🔄 Запрос к YandexGPT..."):
+            resp = requests.post(url, headers=headers, json=payload, timeout=60)
+            
+            if resp.status_code == 401:
+                return "❌ Ошибка авторизации YandexGPT. Проверьте правильность API ключа и Folder ID"
+            elif resp.status_code == 403:
+                return "❌ Доступ запрещен. Проверьте аккаунт Yandex Cloud"
+            elif resp.status_code == 429:
+                return "❌ Превышен лимит запросов к YandexGPT"
+            
+            resp.raise_for_status()
+            result = resp.json()
+            
+            # Проверяем структуру ответа
+            if "result" in result and "alternatives" in result["result"] and len(result["result"]["alternatives"]) > 0:
+                return result["result"]["alternatives"][0]["message"]["text"]
+            else:
+                return f"❌ Неожиданный формат ответа YandexGPT: {result}"
+                
     except requests.exceptions.Timeout:
-        return "❌ Таймаут YandexGPT. Попробуйте ещё раз."
+        return "❌ Таймаут YandexGPT (60 сек). Попробуйте ещё раз."
+    except requests.exceptions.RequestException as e:
+        return f"❌ Ошибка сети YandexGPT: {str(e)}"
     except Exception as e:
         return f"❌ Ошибка YandexGPT: {str(e)}"
 
 def call_deepseek(prompt):
     api_key = get_api_key("DEEPSEEK_API_KEY")
     
+    st.sidebar.write(f"DeepSeek API Key получен: {'Да' if api_key else 'Нет'}, длина: {len(api_key) if api_key else 0}")
+    
     if not api_key:
-        return "⚠️ Не указан DEEPSEEK_API_KEY. Добавьте ключ в Secrets"
+        return "⚠️ Не указан DEEPSEEK_API_KEY. Добавьте ключ в Secrets\n\n📝 Инструкция:\n1. В боковой панели нажмите 'Manage app'\n2. Перейдите в раздел 'Secrets'\n3. Добавьте: DEEPSEEK_API_KEY = \"sk-ваш_ключ\""
     
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {
@@ -157,12 +200,26 @@ def call_deepseek(prompt):
     }
     
     try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=30)
-        resp.raise_for_status()
-        result = resp.json()
-        return result["choices"][0]["message"]["content"]
+        with st.spinner("🔄 Запрос к DeepSeek..."):
+            resp = requests.post(url, headers=headers, json=payload, timeout=60)
+            
+            if resp.status_code == 401:
+                return "❌ Ошибка авторизации DeepSeek. Проверьте правильность API ключа"
+            elif resp.status_code == 429:
+                return "❌ Превышен лимит запросов к DeepSeek"
+            
+            resp.raise_for_status()
+            result = resp.json()
+            
+            if "choices" in result and len(result["choices"]) > 0:
+                return result["choices"][0]["message"]["content"]
+            else:
+                return f"❌ Неожиданный формат ответа DeepSeek: {result}"
+                
     except requests.exceptions.Timeout:
-        return "❌ Таймаут DeepSeek. Попробуйте ещё раз."
+        return "❌ Таймаут DeepSeek (60 сек). Попробуйте ещё раз."
+    except requests.exceptions.RequestException as e:
+        return f"❌ Ошибка сети DeepSeek: {str(e)}"
     except Exception as e:
         return f"❌ Ошибка DeepSeek: {str(e)}"
 
@@ -237,11 +294,9 @@ with col_b:
 
 col1, col2, col3 = st.columns(3)
 with col1:
-    platform_input = st.selectbox("Платформа", ["Telegram", "ВКонтакте", "Дзен", "Instagram"], 
-                                  index=["Telegram", "ВКонтакте", "Дзен", "Instagram"].index(st.session_state.platform))
+    platform_input = st.selectbox("Платформа", ["Telegram", "ВКонтакте", "Дзен", "Instagram"])
 with col2:
-    tone_input = st.selectbox("Тон", ["Тёплый и искренний", "Экспертный", "Мотивирующий", "Лёгкий и юмористический"],
-                             index=["Тёплый и искренний", "Экспертный", "Мотивирующий", "Лёгкий и юмористический"].index(st.session_state.tone))
+    tone_input = st.selectbox("Тон", ["Тёплый и искренний", "Экспертный", "Мотивирующий", "Лёгкий и юмористический"])
 with col3:
     temperature = st.slider("Креативность", 0.1, 1.0, 0.7, 0.1)
 
@@ -249,6 +304,7 @@ with col3:
 model_option = st.session_state.get("model_option", "YandexGPT + DeepSeek")
 text_length_display = st.session_state.get("text_length_display", "300-400 слов")
 
+# Кнопка генерации
 if st.button("🚀 Сгенерировать посты", type="primary", use_container_width=True):
     if not topic_input:
         st.error("❌ Введите тему поста!")
@@ -272,12 +328,12 @@ if st.button("🚀 Сгенерировать посты", type="primary", use_c
             if model_option in ["YandexGPT + DeepSeek", "Только YandexGPT"]:
                 yandex_result = call_yandex(prompt)
             else:
-                yandex_result = "❌ Режим DeepSeek только"
+                yandex_result = "❌ Выбран режим 'Только DeepSeek'"
                 
             if model_option in ["YandexGPT + DeepSeek", "Только DeepSeek"]:
                 deepseek_result = call_deepseek(prompt)
             else:
-                deepseek_result = "❌ Режим YandexGPT только"
+                deepseek_result = "❌ Выбран режим 'Только YandexGPT'"
             
             # Сохраняем в session_state
             st.session_state.yandex_text = yandex_result
@@ -287,8 +343,9 @@ if st.button("🚀 Сгенерировать посты", type="primary", use_c
             st.session_state.tone = tone_input
             st.session_state.generated = True
             
-            # Сохраняем в историю
-            if not yandex_result.startswith("❌") or not deepseek_result.startswith("❌"):
+            # Сохраняем в историю только если есть успешные ответы
+            if ("Не настроен" not in yandex_result and "Не указан" not in deepseek_result and 
+                not yandex_result.startswith("❌") and not deepseek_result.startswith("❌")):
                 save_to_history(topic_input, platform_input, tone_input, text_length_display, 
                               yandex_result, deepseek_result)
             
@@ -296,7 +353,7 @@ if st.button("🚀 Сгенерировать посты", type="primary", use_c
             st.rerun()
 
 # Отображаем результаты, если есть
-if st.session_state.generated and st.session_state.yandex_text:
+if st.session_state.generated and (st.session_state.yandex_text or st.session_state.deepseek_text):
     st.markdown("---")
     
     # Создаем вкладки
@@ -305,45 +362,55 @@ if st.session_state.generated and st.session_state.yandex_text:
     with tab1:
         if st.session_state.yandex_text:
             st.subheader("YandexGPT (Lite)")
-            st.markdown(st.session_state.yandex_text)
             
-            col_act1, col_act2 = st.columns(2)
-            with col_act1:
-                try:
-                    doc_file = save_to_word(st.session_state.yandex_text, "yandex_post.docx")
-                    with open(doc_file, "rb") as f:
-                        st.download_button("📥 Скачать Word", f, file_name="post_yandex.docx", 
-                                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-                except:
-                    st.error("Ошибка создания Word файла")
-            with col_act2:
-                st.code(st.session_state.yandex_text, language="markdown", line_numbers=False)
+            # Проверяем на ошибки
+            if "Не настроен" in st.session_state.yandex_text or "Не указан" in st.session_state.yandex_text:
+                st.error(st.session_state.yandex_text)
+            else:
+                st.markdown(st.session_state.yandex_text)
+                
+                col_act1, col_act2 = st.columns(2)
+                with col_act1:
+                    try:
+                        doc_file = save_to_word(st.session_state.yandex_text, "yandex_post.docx")
+                        with open(doc_file, "rb") as f:
+                            st.download_button("📥 Скачать Word", f, file_name="post_yandex.docx", 
+                                             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+                    except:
+                        st.error("Ошибка создания Word файла")
+                with col_act2:
+                    st.code(st.session_state.yandex_text, language="markdown", line_numbers=False)
         else:
             st.info("Нет сгенерированного текста от YandexGPT")
     
     with tab2:
         if st.session_state.deepseek_text:
             st.subheader("DeepSeek")
-            st.markdown(st.session_state.deepseek_text)
             
-            col_act1, col_act2 = st.columns(2)
-            with col_act1:
-                try:
-                    doc_file = save_to_word(st.session_state.deepseek_text, "deepseek_post.docx")
-                    with open(doc_file, "rb") as f:
-                        st.download_button("📥 Скачать Word", f, file_name="post_deepseek.docx",
-                                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-                except:
-                    st.error("Ошибка создания Word файла")
-            with col_act2:
-                st.code(st.session_state.deepseek_text, language="markdown", line_numbers=False)
+            # Проверяем на ошибки
+            if "Не настроен" in st.session_state.deepseek_text or "Не указан" in st.session_state.deepseek_text:
+                st.error(st.session_state.deepseek_text)
+            else:
+                st.markdown(st.session_state.deepseek_text)
+                
+                col_act1, col_act2 = st.columns(2)
+                with col_act1:
+                    try:
+                        doc_file = save_to_word(st.session_state.deepseek_text, "deepseek_post.docx")
+                        with open(doc_file, "rb") as f:
+                            st.download_button("📥 Скачать Word", f, file_name="post_deepseek.docx",
+                                             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+                    except:
+                        st.error("Ошибка создания Word файла")
+                with col_act2:
+                    st.code(st.session_state.deepseek_text, language="markdown", line_numbers=False)
         else:
             st.info("Нет сгенерированного текста от DeepSeek")
     
     with tab3:
         st.subheader("Предпросмотр в стиле Telegram")
         
-        if st.session_state.yandex_text and not st.session_state.yandex_text.startswith("❌"):
+        if st.session_state.yandex_text and "Не настроен" not in st.session_state.yandex_text and "Не указан" not in st.session_state.yandex_text:
             st.markdown("**📨 От YandexGPT:**")
             preview_ya = st.session_state.yandex_text[:400] + "..." if len(st.session_state.yandex_text) > 400 else st.session_state.yandex_text
             st.markdown(f"""
@@ -357,7 +424,7 @@ if st.session_state.generated and st.session_state.yandex_text:
             </div>
             """, unsafe_allow_html=True)
         
-        if st.session_state.deepseek_text and not st.session_state.deepseek_text.startswith("❌"):
+        if st.session_state.deepseek_text and "Не настроен" not in st.session_state.deepseek_text and "Не указан" not in st.session_state.deepseek_text:
             st.markdown("**📨 От DeepSeek:**")
             preview_ds = st.session_state.deepseek_text[:400] + "..." if len(st.session_state.deepseek_text) > 400 else st.session_state.deepseek_text
             st.markdown(f"""
@@ -395,7 +462,7 @@ if st.session_state.generated and st.session_state.yandex_text:
         - **DeepSeek** лучше для: развёрнутых текстов, креативных идей, сложных запросов
         """)
         
-        # Добавляем кнопку очистки
+        # Кнопка очистки
         if st.button("🗑️ Очистить результаты"):
             st.session_state.generated = False
             st.session_state.yandex_text = ""
@@ -428,12 +495,11 @@ with st.sidebar:
             df_history = pd.read_csv("history.csv", encoding='utf-8-sig')
             st.metric("📝 Всего постов", len(df_history))
             
-            # Считаем посты за сегодня
             today = datetime.now().strftime("%d.%m.%Y")
             today_posts = df_history[df_history["Дата"].str.startswith(today)] if not df_history.empty else pd.DataFrame()
             st.metric("📅 Сегодня", len(today_posts))
         except Exception as e:
-            st.info(f"📭 История: {str(e)[:50]}")
+            st.info(f"История: {str(e)[:50]}")
     else:
         st.info("📭 История пуста")
     
@@ -465,15 +531,15 @@ with st.sidebar:
     yandex_folder = get_api_key("YANDEX_FOLDER_ID")
     deepseek_key = get_api_key("DEEPSEEK_API_KEY")
     
-    if yandex_key and yandex_folder:
+    if yandex_key and yandex_folder and len(yandex_key) > 10 and len(yandex_folder) > 5:
         st.success("✅ YandexGPT готов")
     else:
-        st.error("❌ YandexGPT: нет ключей")
+        st.error(f"❌ YandexGPT: {'нет ключей' if not yandex_key else f'Folder ID: {len(yandex_folder) if yandex_folder else 0} символов'}")
     
-    if deepseek_key:
+    if deepseek_key and len(deepseek_key) > 20:
         st.success("✅ DeepSeek готов")
     else:
-        st.error("❌ DeepSeek: нет ключа")
+        st.error(f"❌ DeepSeek: ключ {'отсутствует' if not deepseek_key else f'короткий ({len(deepseek_key)} символов)'}")
     
     st.divider()
     
@@ -481,9 +547,9 @@ with st.sidebar:
     st.info("""
     **ИИ-помощник для семейного канала**
     
-    Версия 3.0
+    Версия 3.1
     
-    🔑 API ключи настроены через Secrets
+    🔑 API ключи: настройте в Secrets
     
     📝 Генерирует посты для:
     • Telegram
