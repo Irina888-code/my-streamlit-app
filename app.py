@@ -12,7 +12,7 @@ except ImportError:
 
 st.set_page_config(
     page_title="ИИ-помощник для семейного канала",
-    page_icon="👨‍👩‍👧",
+    page_icon="👨‍👩‍",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -86,6 +86,13 @@ CSS_STYLES = """
 
 st.markdown(CSS_STYLES, unsafe_allow_html=True)
 
+def get_secret(key):
+    """Получить секрет из Streamlit Secrets или из переменных окружения"""
+    try:
+        return st.secrets.get(key, "")
+    except:
+        return os.getenv(key, "")
+
 def build_prompt(topic, platform, tone, temperature, text_length):
     prompt_text = (
         f"Persona: Опытный контент-мейкер и копирайтер для семейных медиа. Эксперт по созданию лаконичных, практичных и вовлекающих материалов для родителей детей 2-10 лет. Пишет живо, без штампов, с фокусом на применимую пользу и эмоциональный отклик.\n\n"
@@ -103,9 +110,8 @@ def build_prompt(topic, platform, tone, temperature, text_length):
     return prompt_text
 
 def call_yandex(prompt):
-    # Используем st.secrets для Streamlit Cloud
-    api_key = st.secrets.get("YANDEX_API_KEY", "")
-    folder_id = st.secrets.get("YANDEX_FOLDER_ID", "")
+    api_key = get_secret("YANDEX_API_KEY")
+    folder_id = get_secret("YANDEX_FOLDER_ID")
     
     if not api_key or not folder_id:
         return "Не настроен YandexGPT"
@@ -133,8 +139,7 @@ def call_yandex(prompt):
         return f"YandexGPT ошибка: {str(e)}"
 
 def call_deepseek(prompt):
-    # Используем st.secrets для Streamlit Cloud
-    api_key = st.secrets.get("DEEPSEEK_API_KEY", "")
+    api_key = get_secret("DEEPSEEK_API_KEY")
     
     if not api_key:
         return "Не указан DEEPSEEK_API_KEY"
@@ -368,7 +373,7 @@ with st.sidebar:
             else:
                 st.write("🔄 Обновите историю (сохраните новый пост)")
         except Exception:
-            st.write("🔄 Обновите историю (сохраните новый пост)")
+            st.write(" Обновите историю (сохраните новый пост)")
     else:
         st.write("Нет постов")
     
