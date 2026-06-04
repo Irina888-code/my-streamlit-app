@@ -12,17 +12,17 @@ except ImportError:
 
 st.set_page_config(
     page_title="ИИ-помощник для семейного канала",
-    page_icon="👨‍👩‍👧",
+    page_icon="👨‍👩‍",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-def get_secret(key):
-    """Безопасное получение секрета"""
+def get_api_key(key_name):
+    """Безопасное получение API ключей"""
     try:
-        return st.secrets.get(key, "")
+        return st.secrets[key_name]
     except:
-        return os.getenv(key, "")
+        return os.getenv(key_name, "")
 
 CSS_STYLES = """
 <style>
@@ -46,16 +46,6 @@ CSS_STYLES = """
     font-size: 1.2em;
     margin-bottom: 30px;
     font-weight: 500;
-}
-
-.post-card {
-    background: white;
-    border-radius: 15px;
-    padding: 25px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-    margin: 10px 0;
-    border-left: 5px solid #667eea;
-    color: black;
 }
 
 .stButton > button {
@@ -92,23 +82,23 @@ st.markdown(CSS_STYLES, unsafe_allow_html=True)
 
 def build_prompt(topic, platform, tone, temperature, text_length):
     prompt_text = (
-        f"Persona: Опытный контент-мейкер и копирайтер для семейных медиа. Эксперт по созданию лаконичных, практичных и вовлекающих материалов для родителей детей 2-10 лет. Пишет живо, без штампов, с фокусом на применимую пользу и эмоциональный отклик.\n\n"
+        f"Persona: Опытный контент-мейкер и копирайтер для семейных медиа. Эксперт по созданию лаконичных, практичных и вовлекающих материалов для родителей детей 2-10 лет.\n\n"
         f"Task: Написать готовый к публикации пост для платформы {platform} на тему: '{topic}'.\n\n"
-        f"Context: Аудитория - родители дошкольников и младших школьников (2-10 лет). Цель: дать конкретную пользу за 30 секунд чтения, вызвать желание сохранить материал и ответить в комментариях. Текст должен восприниматься как рекомендация от опытного друга, а не как сухая инструкция или рекламный текст.\n\n"
-        f"Format: Структура: 1) Вступление (цепляющий факт, ситуация или вопрос, сразу переходящий в тему) - 2) 2-3 практических совета (конкретные шаги, микро-примеры, без абстракций) - 3) Вопрос к читателям для обсуждения в комментариях. Эмодзи: уместные, умеренное количество (максимум 1 на каждые 2-3 предложения), не заменяют знаки препинания. В конце ровно 8-10 хештегов, включая обязательные: #семья #родители #воспитание #дети #семейноевремя. Вывести ТОЛЬКО текст поста, без приветствий, комментариев или markdown-разметки, кроме переносов строк.\n\n"
+        f"Context: Аудитория - родители дошкольников и младших школьников (2-10 лет).\n\n"
+        f"Format: Структура: 1) Вступление - 2) 2-3 практических совета - 3) Вопрос к читателям. Эмодзи умеренно. В конце 8-10 хештегов включая #семья #родители #воспитание #дети #семейноевремя.\n\n"
         f"Критерии:\n"
-        f"- Без воды: полный запрет на вводные клише (в современном мире, как известно, важно помнить), общие фразы, повторы и пустые связки. Каждое предложение должно нести смысл, инструкцию или эмоцию.\n"
-        f"- Читабельность: короткие абзацы (1-3 строки), активный залог, разговорный ритм, адаптированный под {platform}.\n"
-        f"- Интерес и креативность: при низком значении креативности ({temperature}) - чёткие шаги и факты; при среднем - лёгкие истории из жизни и живые примеры; при высоком - неожиданные ракурсы, яркие метафоры и игровые форматы, без потери ясности.\n"
-        f"- Практичность советов: каждый пункт должен содержать конкретное действие, временные рамки или сценарий, применимый здесь и сейчас для возраста 2-10 лет.\n"
-        f"- Соблюдение объёма: {text_length}. Текст должен быть готов к копированию и публикации без редактуры.\n\n"
-        f"Выводить исключительно финальный пост."
+        f"- Без воды и клише\n"
+        f"- Короткие абзацы (1-3 строки)\n"
+        f"- Креативность: {temperature}\n"
+        f"- Объём: {text_length}\n"
+        f"- Практичные советы для возраста 2-10 лет\n\n"
+        f"Выводить только финальный пост."
     )
     return prompt_text
 
 def call_yandex(prompt):
-    api_key = get_secret("YANDEX_API_KEY")
-    folder_id = get_secret("YANDEX_FOLDER_ID")
+    api_key = get_api_key("YANDEX_API_KEY")
+    folder_id = get_api_key("YANDEX_FOLDER_ID")
     
     if not api_key or not folder_id:
         return "Не настроен YandexGPT"
@@ -136,7 +126,7 @@ def call_yandex(prompt):
         return f"YandexGPT ошибка: {str(e)}"
 
 def call_deepseek(prompt):
-    api_key = get_secret("DEEPSEEK_API_KEY")
+    api_key = get_api_key("DEEPSEEK_API_KEY")
     
     if not api_key:
         return "Не указан DEEPSEEK_API_KEY"
@@ -189,7 +179,7 @@ def save_to_history(topic, platform, tone, text_length, yandex_text, deepseek_te
         df.to_csv(csv_file, index=False)
 
 # Основной интерфейс
-st.markdown("<div class='main-title'>👨‍👩‍👧 ИИ-помощник для семейного канала</div>", unsafe_allow_html=True)
+st.markdown("<div class='main-title'>👨‍👩‍ ИИ-помощник для семейного канала</div>", unsafe_allow_html=True)
 st.markdown("<div class='subtitle'>✨ Генерация постов с хештегами и эмодзи через YandexGPT и DeepSeek</div>", unsafe_allow_html=True)
 
 quick_topics = [
@@ -324,16 +314,14 @@ with st.sidebar:
     st.markdown("<div class='sidebar-header'><h2>📋 Меню</h2></div>", unsafe_allow_html=True)
     st.write("### Настройки")
     
-    selected_model = st.selectbox(
+    model_option = st.selectbox(
         "Модель ИИ",
-        ["YandexGPT + DeepSeek", "Только YandexGPT", "Только DeepSeek"],
-        key="model_select"
+        ["YandexGPT + DeepSeek", "Только YandexGPT", "Только DeepSeek"]
     )
     
     text_length = st.selectbox(
         "📏 Длина текста",
-        ["Менее 300 слов", "300-400 слов", "500-600 слов", "Более 600 слов"],
-        key="text_length_select"
+        ["Менее 300 слов", "300-400 слов", "500-600 слов", "Более 600 слов"]
     )
     
     st.session_state.text_length = text_length
@@ -346,12 +334,12 @@ with st.sidebar:
             df_history = pd.read_csv("history.csv")
             if "Длина" not in df_history.columns:
                 os.remove("history.csv")
-                st.info("🔄 История обновлена (старый формат)")
+                st.info("🔄 История обновлена")
             else:
                 st.metric("Всего постов", len(df_history))
-        except Exception:
+        except:
             os.remove("history.csv")
-            st.info("🔄 История обновлена (исправлена ошибка)")
+            st.info("🔄 История обновлена")
     else:
         st.info("История пуста")
     
@@ -363,10 +351,8 @@ with st.sidebar:
             df_history = pd.read_csv("history.csv")
             if "Длина" in df_history.columns:
                 st.dataframe(df_history.tail(5), use_container_width=True)
-            else:
-                st.write("🔄 Обновите историю (сохраните новый пост)")
-        except Exception:
-            st.write("🔄 Обновите историю (сохраните новый пост)")
+        except:
+            st.write("Сохраните новый пост")
     else:
         st.write("Нет постов")
     
