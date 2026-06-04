@@ -40,19 +40,29 @@ def get_css_styles(theme):
             background-color: #1a1a2e;
         }
         
+        /* Закрашиваем все белые фоны в тёмный цвет */
+        .stMarkdown, .stTextArea, .stTextInput, div[data-testid="stMarkdownContainer"],
+        .element-container, .stAlert, .stInfo, .stSuccess, .stWarning, .stError,
+        .stTabs [data-baseweb="tab-panel"], .stTextInput > div > div > input,
+        .stSelectbox > div > div, .stNumberInput > div > div > input,
+        .stDateInput > div > div > input, .stTimeInput > div > div > input {
+            background-color: #1a1a2e !important;
+        }
+        
         /* Принудительный светлый текст для всего основного контента */
-        .main, .stMarkdown, .stTextArea, .stTextInput, div[data-testid="stMarkdownContainer"] {
+        .main, .stMarkdown, .stTextArea, .stTextInput, div[data-testid="stMarkdownContainer"],
+        .element-container, .stAlert, .stInfo, .stSuccess, .stWarning, .stError {
             color: #e2e8f0 !important;
         }
         
         /* Текст в блоках и абзацах */
-        p, h1, h2, h3, h4, h5, h6, span, div, .stAlert, .stInfo, .stSuccess, .stWarning, .stError {
+        p, h1, h2, h3, h4, h5, h6, span, div, label, .stMarkdown p {
             color: #e2e8f0 !important;
         }
         
         /* Карточки и контейнеры с текстом */
         .stTabs [data-baseweb="tab-panel"] {
-            background-color: transparent;
+            background-color: #1a1a2e !important;
             color: #e2e8f0 !important;
         }
         
@@ -144,6 +154,7 @@ def get_css_styles(theme):
             border-radius: 8px;
             padding: 8px 16px;
             color: #e2e8f0 !important;
+            background-color: #0f0c29 !important;
         }
         
         /* Метрики в тёмной теме */
@@ -160,9 +171,11 @@ def get_css_styles(theme):
         /* Dataframe таблицы */
         .stDataFrame, .dataframe {
             color: #e2e8f0 !important;
+            background-color: #1a1a2e !important;
         }
         .stDataFrame table, .dataframe table {
             color: #e2e8f0 !important;
+            background-color: #1a1a2e !important;
         }
         .stDataFrame th, .dataframe th {
             background-color: #0f0c29 !important;
@@ -176,6 +189,26 @@ def get_css_styles(theme):
         /* Код блоки */
         .stCodeBlock {
             background-color: #0f0c29 !important;
+        }
+        
+        /* Поля ввода */
+        .stTextInput > div > div > input {
+            background-color: #0f0c29 !important;
+            color: #e2e8f0 !important;
+        }
+        
+        /* Selectbox */
+        .stSelectbox > div > div {
+            background-color: #0f0c29 !important;
+        }
+        .stSelectbox > div > div > div {
+            color: #e2e8f0 !important;
+        }
+        
+        /* Text area */
+        .stTextArea textarea {
+            background-color: #0f0c29 !important;
+            color: #e2e8f0 !important;
         }
         </style>
         """
