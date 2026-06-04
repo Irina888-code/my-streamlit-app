@@ -1,7 +1,6 @@
 import streamlit as st
 import requests
 import os
-from dotenv import load_dotenv
 import pandas as pd
 from datetime import datetime
 try:
@@ -10,11 +9,6 @@ except ImportError:
     import subprocess
     subprocess.check_call(['pip', 'install', 'python-docx'])
     from docx import Document
-
-load_dotenv()
-
-def get_key(name):
-    return os.getenv(name)
 
 st.set_page_config(
     page_title="ИИ-помощник для семейного канала",
@@ -38,7 +32,7 @@ CSS_STYLES = """
     font-weight: bold;
     text-align: center;
     margin-bottom: 10px;
-}  
+}   
 
 /* СТИЛЬ ДЛЯ ПОДЗАГОЛОВКА */
 .subtitle {
@@ -59,7 +53,7 @@ CSS_STYLES = """
     color: black;
 }
 
-.stButton>button {
+.stButton > button {
     border-radius: 10px;
     font-weight: 500;
 }
@@ -94,25 +88,28 @@ st.markdown(CSS_STYLES, unsafe_allow_html=True)
 
 def build_prompt(topic, platform, tone, temperature, text_length):
     prompt_text = (
-        "Persona: Опытный контент-мейкер и копирайтер для семейных медиа. Эксперт по созданию лаконичных, практичных и вовлекающих материалов для родителей детей 2-10 лет. Пишет живо, без штампов, с фокусом на применимую пользу и эмоциональный отклик.\n\n"
-        "Task: Написать готовый к публикации пост для платформы " + platform + " на тему: \"" + topic + "\".\n\n"
-        "Context: Аудитория - родители дошкольников и младших школьников (2-10 лет). Цель: дать конкретную пользу за 30 секунд чтения, вызвать желание сохранить материал и ответить в комментариях. Текст должен восприниматься как рекомендация от опытного друга, а не как сухая инструкция или рекламный текст.\n\n"
-        "Format: Структура: 1) Вступление (цепляющий факт, ситуация или вопрос, сразу переходящий в тему) - 2) 2-3 практических совета (конкретные шаги, микро-примеры, без абстракций) - 3) Вопрос к читателям для обсуждения в комментариях. Эмодзи: уместные, умеренное количество (максимум 1 на каждые 2-3 предложения), не заменяют знаки препинания. В конце ровно 8-10 хештегов, включая обязательные: #семья #родители #воспитание #дети #семейноевремя. Вывести ТОЛЬКО текст поста, без приветствий, комментариев или markdown-разметки, кроме переносов строк.\n\n"
-        "Критерии:\n"
-        "- Без воды: полный запрет на вводные клише (в современном мире, как известно, важно помнить), общие фразы, повторы и пустые связки. Каждое предложение должно нести смысл, инструкцию или эмоцию.\n"
-        "- Читабельность: короткие абзацы (1-3 строки), активный залог, разговорный ритм, адаптированный под " + platform + ".\n"
-        "- Интерес и креативность: при низком значении креативности (" + str(temperature) + ") - чёткие шаги и факты; при среднем - лёгкие истории из жизни и живые примеры; при высоком - неожиданные ракурсы, яркие метафоры и игровые форматы, без потери ясности.\n"
-        "- Практичность советов: каждый пункт должен содержать конкретное действие, временные рамки или сценарий, применимый здесь и сейчас для возраста 2-10 лет.\n"
-        "- Соблюдение объёма: " + text_length + ". Текст должен быть готов к копированию и публикации без редактуры.\n\n"
-        "Выводить исключительно финальный пост."
+        f"Persona: Опытный контент-мейкер и копирайтер для семейных медиа. Эксперт по созданию лаконичных, практичных и вовлекающих материалов для родителей детей 2-10 лет. Пишет живо, без штампов, с фокусом на применимую пользу и эмоциональный отклик.\n\n"
+        f"Task: Написать готовый к публикации пост для платформы {platform} на тему: '{topic}'.\n\n"
+        f"Context: Аудитория - родители дошкольников и младших школьников (2-10 лет). Цель: дать конкретную пользу за 30 секунд чтения, вызвать желание сохранить материал и ответить в комментариях. Текст должен восприниматься как рекомендация от опытного друга, а не как сухая инструкция или рекламный текст.\n\n"
+        f"Format: Структура: 1) Вступление (цепляющий факт, ситуация или вопрос, сразу переходящий в тему) - 2) 2-3 практических совета (конкретные шаги, микро-примеры, без абстракций) - 3) Вопрос к читателям для обсуждения в комментариях. Эмодзи: уместные, умеренное количество (максимум 1 на каждые 2-3 предложения), не заменяют знаки препинания. В конце ровно 8-10 хештегов, включая обязательные: #семья #родители #воспитание #дети #семейноевремя. Вывести ТОЛЬКО текст поста, без приветствий, комментариев или markdown-разметки, кроме переносов строк.\n\n"
+        f"Критерии:\n"
+        f"- Без воды: полный запрет на вводные клише (в современном мире, как известно, важно помнить), общие фразы, повторы и пустые связки. Каждое предложение должно нести смысл, инструкцию или эмоцию.\n"
+        f"- Читабельность: короткие абзацы (1-3 строки), активный залог, разговорный ритм, адаптированный под {platform}.\n"
+        f"- Интерес и креативность: при низком значении креативности ({temperature}) - чёткие шаги и факты; при среднем - лёгкие истории из жизни и живые примеры; при высоком - неожиданные ракурсы, яркие метафоры и игровые форматы, без потери ясности.\n"
+        f"- Практичность советов: каждый пункт должен содержать конкретное действие, временные рамки или сценарий, применимый здесь и сейчас для возраста 2-10 лет.\n"
+        f"- Соблюдение объёма: {text_length}. Текст должен быть готов к копированию и публикации без редактуры.\n\n"
+        f"Выводить исключительно финальный пост."
     )
     return prompt_text
 
 def call_yandex(prompt):
-    api_key = st.secrets.get_key("YANDEX_API_KEY", "")
-    folder_id = st.secrets.get_key("YANDEX_FOLDER_ID", "")
+    # Используем st.secrets для Streamlit Cloud
+    api_key = st.secrets.get("YANDEX_API_KEY", "")
+    folder_id = st.secrets.get("YANDEX_FOLDER_ID", "")
+    
     if not api_key or not folder_id:
         return "Не настроен YandexGPT"
+    
     url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
     headers = {
         "Authorization": "Api-Key " + api_key,
@@ -120,26 +117,33 @@ def call_yandex(prompt):
         "Content-Type": "application/json"
     }
     payload = {
-        "modelUri": "gpt://" + folder_id + "/yandexgpt-lite",
+        "modelUri": f"gpt://{folder_id}/yandexgpt-lite",
         "completionOptions": {"stream": False, "temperature": 0.7, "maxTokens": 2000},
         "messages": [
             {"role": "system", "text": "Ты контент-мейкер."},
             {"role": "user", "text": prompt}
         ]
     }
+    
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=30)
         resp.raise_for_status()
         return resp.json()["result"]["alternatives"][0]["message"]["text"]
     except Exception as e:
-        return "YandexGPT ошибка: " + str(e)
+        return f"YandexGPT ошибка: {str(e)}"
 
 def call_deepseek(prompt):
-    api_key = st.secrets.get_key("DEEPSEEK_API_KEY", "")
+    # Используем st.secrets для Streamlit Cloud
+    api_key = st.secrets.get("DEEPSEEK_API_KEY", "")
+    
     if not api_key:
         return "Не указан DEEPSEEK_API_KEY"
+    
     url = "https://api.deepseek.com/v1/chat/completions"
-    headers = {"Authorization": "Bearer " + api_key, "Content-Type": "application/json"}
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
     payload = {
         "model": "deepseek-chat",
         "messages": [
@@ -149,12 +153,13 @@ def call_deepseek(prompt):
         "max_tokens": 2000,
         "temperature": 0.7
     }
+    
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=30)
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"]
     except Exception as e:
-        return "DeepSeek ошибка: " + str(e)
+        return f"DeepSeek ошибка: {str(e)}"
 
 def save_to_word(text, filename):
     doc = Document()
@@ -175,12 +180,14 @@ def save_to_history(topic, platform, tone, text_length, yandex_text, deepseek_te
     }
     df = pd.DataFrame(data)
     csv_file = "history.csv"
+    
     if os.path.exists(csv_file):
         df.to_csv(csv_file, mode="a", header=False, index=False)
     else:
         df.to_csv(csv_file, index=False)
 
-st.markdown("<div class='main-title'>👨‍👩‍ ИИ-помощник для семейного канала</div>", unsafe_allow_html=True)
+# Основной интерфейс
+st.markdown("<div class='main-title'>👨‍👩‍👧 ИИ-помощник для семейного канала</div>", unsafe_allow_html=True)
 st.markdown("<div class='subtitle'>✨ Генерация постов с хештегами и эмодзи через YandexGPT и DeepSeek</div>", unsafe_allow_html=True)
 
 quick_topics = [
@@ -222,12 +229,14 @@ if st.button("Сгенерировать посты", type="primary", use_contai
             prompt = build_prompt(topic, platform, tone, temperature, st.session_state.text_length)
             yandex_result = call_yandex(prompt)
             deepseek_result = call_deepseek(prompt)
+            
             st.session_state.yandex_text = yandex_result
             st.session_state.deepseek_text = deepseek_result
             st.session_state.topic = topic
             st.session_state.platform = platform
             st.session_state.tone = tone
-        st.success("Посты успешно сгенерированы!")
+            
+            st.success("Посты успешно сгенерированы!")
 
 if "yandex_text" in st.session_state:
     st.markdown("---")
@@ -269,12 +278,26 @@ if "yandex_text" in st.session_state:
         st.subheader("Предпросмотр Telegram")
         st.markdown("### От YandexGPT:")
         yandex_preview = st.session_state.yandex_text[:500] + "..." if len(st.session_state.yandex_text) > 500 else st.session_state.yandex_text
-        preview_html_ya = "<div style='background: #E7EBF0; border-radius: 15px; padding: 15px; max-width: 400px;'><div style='background: white; border-radius: 12px; padding: 12px 15px; font-size: 14px; line-height: 1.5; color: #000;'>" + yandex_preview.replace(chr(10), "<br>") + "</div><div style='text-align: right; color: #888; font-size: 11px;'>" + datetime.now().strftime("%H:%M") + "</div></div>"
+        preview_html_ya = f"""<div style='background: #E7EBF0; border-radius: 15px; padding: 15px; max-width: 400px;'>
+            <div style='background: white; border-radius: 12px; padding: 12px 15px; font-size: 14px; line-height: 1.5; color: #000;'>
+                {yandex_preview.replace(chr(10), "<br>")}
+            </div>
+            <div style='text-align: right; color: #888; font-size: 11px;'>
+                {datetime.now().strftime("%H:%M")}
+            </div>
+        </div>"""
         st.markdown(preview_html_ya, unsafe_allow_html=True)
         
         st.markdown("### От DeepSeek:")
         deepseek_preview = st.session_state.deepseek_text[:500] + "..." if len(st.session_state.deepseek_text) > 500 else st.session_state.deepseek_text
-        preview_html_ds = "<div style='background: #E7EBF0; border-radius: 15px; padding: 15px; max-width: 400px;'><div style='background: white; border-radius: 12px; padding: 12px 15px; font-size: 14px; line-height: 1.5; color: #000;'>" + deepseek_preview.replace(chr(10), "<br>") + "</div><div style='text-align: right; color: #888; font-size: 11px;'>" + datetime.now().strftime("%H:%M") + "</div></div>"
+        preview_html_ds = f"""<div style='background: #E7EBF0; border-radius: 15px; padding: 15px; max-width: 400px;'>
+            <div style='background: white; border-radius: 12px; padding: 12px 15px; font-size: 14px; line-height: 1.5; color: #000;'>
+                {deepseek_preview.replace(chr(10), "<br>")}
+            </div>
+            <div style='text-align: right; color: #888; font-size: 11px;'>
+                {datetime.now().strftime("%H:%M")}
+            </div>
+        </div>"""
         st.markdown(preview_html_ds, unsafe_allow_html=True)
     
     with tab4:
@@ -284,28 +307,33 @@ if "yandex_text" in st.session_state:
             st.metric("YandexGPT символов", len(st.session_state.yandex_text))
         with col_c2:
             st.metric("DeepSeek символов", len(st.session_state.deepseek_text))
+        
         analysis_text = (
-            "**Тема:** " + st.session_state.topic + "\n\n"
-            "**Платформа:** " + st.session_state.platform + "\n\n"
-            "**Тон:** " + st.session_state.tone + "\n\n"
-            "**Длина:** " + st.session_state.text_length + "\n\n"
+            f"**Тема:** {st.session_state.topic}\n\n"
+            f"**Платформа:** {st.session_state.platform}\n\n"
+            f"**Тон:** {st.session_state.tone}\n\n"
+            f"**Длина:** {st.session_state.text_length}\n\n"
             "**YandexGPT** лучше для: коротких постов и русского языка.\n\n"
             "**DeepSeek** лучше для: развёрнутых текстов и креативных идей."
         )
         st.info(analysis_text)
 
+# Боковая панель
 with st.sidebar:
     st.markdown("<div class='sidebar-header'><h2>📋 Меню</h2></div>", unsafe_allow_html=True)
-    
     st.write("### Настройки")
-    selected_model = st.selectbox("Модель ИИ", ["YandexGPT + DeepSeek", "Только YandexGPT", "Только DeepSeek"], key="model_select")
     
-    text_length = st.selectbox("📏 Длина текста", [
-        "Менее 300 слов",
-        "300-400 слов",
-        "500-600 слов",
-        "Более 600 слов"
-    ], key="text_length_select")
+    selected_model = st.selectbox(
+        "Модель ИИ",
+        ["YandexGPT + DeepSeek", "Только YandexGPT", "Только DeepSeek"],
+        key="model_select"
+    )
+    
+    text_length = st.selectbox(
+        "📏 Длина текста",
+        ["Менее 300 слов", "300-400 слов", "500-600 слов", "Более 600 слов"],
+        key="text_length_select"
+    )
     
     # Сохраняем выбранную длину в session_state
     st.session_state.text_length = text_length
