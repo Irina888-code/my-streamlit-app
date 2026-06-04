@@ -109,8 +109,8 @@ def build_prompt(topic, platform, tone, temperature, text_length):
     return prompt_text
 
 def call_yandex(prompt):
-    api_key = get_key("YANDEX_API_KEY")
-    folder_id = get_key("YANDEX_FOLDER_ID")
+    api_key = st.secrets.get_key("YANDEX_API_KEY", "")
+    folder_id = st.secrets.get_key("YANDEX_FOLDER_ID", "")
     if not api_key or not folder_id:
         return "Не настроен YandexGPT"
     url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
@@ -135,7 +135,7 @@ def call_yandex(prompt):
         return "YandexGPT ошибка: " + str(e)
 
 def call_deepseek(prompt):
-    api_key = get_key("DEEPSEEK_API_KEY")
+    api_key = st.secrets.get_key("DEEPSEEK_API_KEY", "")
     if not api_key:
         return "Не указан DEEPSEEK_API_KEY"
     url = "https://api.deepseek.com/v1/chat/completions"
