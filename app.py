@@ -22,9 +22,9 @@ def get_api_key(key_name):
     try:
         if key_name in st.secrets:
             value = st.secrets[key_name]
-            if value and len(str(value)) > 3:
+            if value and len(str(value)) > 5:
                 return str(value).strip()
-    except:
+    except Exception as e:
         pass
     
     env_value = os.getenv(key_name, "")
@@ -37,7 +37,6 @@ CSS_STYLES = """
 <style>
 #MainMenu {visibility: hidden;}
 .stAppDeployButton {display: none;}
-
 .main-title {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
     -webkit-background-clip: text;
@@ -48,7 +47,6 @@ CSS_STYLES = """
     text-align: center;
     margin-bottom: 10px;
 }   
-
 .subtitle {
     text-align: center;
     color: #764ba2;
@@ -56,13 +54,11 @@ CSS_STYLES = """
     margin-bottom: 30px;
     font-weight: 500;
 }
-
 .stButton > button {
     border-radius: 10px;
     font-weight: 500;
     width: 100%;
 }
-
 [data-testid="stSidebar"] {
     background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
 }
@@ -110,8 +106,8 @@ def call_yandex(prompt):
     api_key = get_api_key("YANDEX_API_KEY")
     folder_id = get_api_key("YANDEX_FOLDER_ID")
     
-    if not api_key or not folder_id or len(api_key) < 10 or len(folder_id) < 5:
-        return "⚠️ YandexGPT: ключи не настроены или слишком короткие. Добавьте настоящие ключи в Secrets"
+    if not api_key or not folder_id:
+        return "⚠️ YandexGPT: ключи не найдены"
     
     url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
     headers = {
@@ -134,26 +130,19 @@ def call_yandex(prompt):
     
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=60)
-        resp.raise_for_status()
-        result = resp.json()
-        
-        if "result" in result and "alternatives" in result["result"] and len(result["result"]["alternatives"]) > 0:
+        if resp.status_code == 200:
+            result = resp.json()
             return result["result"]["alternatives"][0]["message"]["text"]
         else:
-            return f"❌ Неожиданный ответ YandexGPT"
-                
-    except requests.exceptions.Timeout:
-        return "❌ Таймаут YandexGPT. Попробуйте ещё раз."
-    except requests.exceptions.RequestException as e:
-        return f"❌ Ошибка YandexGPT: {str(e)[:100]}"
+            return f"❌ Ошибка YandexGPT: {resp.status_code}"
     except Exception as e:
         return f"❌ Ошибка YandexGPT: {str(e)[:100]}"
 
 def call_deepseek(prompt):
     api_key = get_api_key("DEEPSEEK_API_KEY")
     
-    if not api_key or len(api_key) < 20:
-        return "⚠️ DeepSeek: ключ не настроен или слишком короткий. Добавьте настоящий ключ в Secrets (должен начинаться с sk- и содержать ~40 символов)"
+    if not api_key:
+        return "⚠️ DeepSeek: ключ не найден"
     
     url = "https://api.deepseek.com/v1/chat/completions"
     headers = {
@@ -172,18 +161,11 @@ def call_deepseek(prompt):
     
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=60)
-        resp.raise_for_status()
-        result = resp.json()
-        
-        if "choices" in result and len(result["choices"]) > 0:
+        if resp.status_code == 200:
+            result = resp.json()
             return result["choices"][0]["message"]["content"]
         else:
-            return f"❌ Неожиданный ответ DeepSeek"
-                
-    except requests.exceptions.Timeout:
-        return "❌ Таймаут DeepSeek. Попробуйте ещё раз."
-    except requests.exceptions.RequestException as e:
-        return f"❌ Ошибка DeepSeek: {str(e)[:100]}"
+            return f"❌ Ошибка DeepSeek: {resp.status_code}"
     except Exception as e:
         return f"❌ Ошибка DeepSeek: {str(e)[:100]}"
 
@@ -252,7 +234,7 @@ quick_topics = [
 
 col_a, col_b = st.columns([3, 1])
 with col_a:
-    topic_input = st.text_input("Тема поста", placeholder="Введите свою тему", value=st.session_state.topic)
+    topic_input = st.text_input("Тема поста", placeholder="Введите свою тему")
 with col_b:
     selected_quick = st.selectbox("Или выберите:", ["- Готовые темы -"] + quick_topics)
     if selected_quick != "- Готовые темы -":
@@ -266,11 +248,9 @@ with col2:
 with col3:
     temperature = st.slider("Креативность", 0.1, 1.0, 0.7, 0.1)
 
-# Получаем настройки из боковой панели
 model_option = st.session_state.get("model_option", "YandexGPT + DeepSeek")
 text_length_display = st.session_state.get("text_length_display", "300-400 слов")
 
-# Кнопка генерации
 if st.button("🚀 Сгенерировать посты", type="primary", use_container_width=True):
     if not topic_input:
         st.error("❌ Введите тему поста!")
@@ -306,165 +286,85 @@ if st.button("🚀 Сгенерировать посты", type="primary", use_c
             st.session_state.tone = tone_input
             st.session_state.generated = True
             
-            if ("не настроен" not in yandex_result.lower() and "не указан" not in deepseek_result.lower() and 
-                not yandex_result.startswith("❌") and not deepseek_result.startswith("❌")):
-                save_to_history(topic_input, platform_input, tone_input, text_length_display, 
-                              yandex_result, deepseek_result)
+            if not yandex_result.startswith("❌") and not yandex_result.startswith("⚠️") and not yandex_result.startswith("ℹ️"):
+                if not deepseek_result.startswith("❌") and not deepseek_result.startswith("⚠️") and not deepseek_result.startswith("ℹ️"):
+                    save_to_history(topic_input, platform_input, tone_input, text_length_display, yandex_result, deepseek_result)
             
             st.success("✅ Генерация завершена!")
             st.rerun()
 
-# Отображаем результаты
-if st.session_state.generated and (st.session_state.yandex_text or st.session_state.deepseek_text):
+if st.session_state.generated:
     st.markdown("---")
-    
-    tab1, tab2, tab3, tab4 = st.tabs(["📝 YandexGPT", "🤖 DeepSeek", "📱 Предпросмотр", "📊 Сравнение"])
+    tab1, tab2, tab3 = st.tabs(["📝 YandexGPT", "🤖 DeepSeek", "📊 Сравнение"])
     
     with tab1:
         if st.session_state.yandex_text:
-            st.subheader("YandexGPT (Lite)")
+            st.subheader("YandexGPT")
             st.markdown(st.session_state.yandex_text)
-            
-            col_act1, col_act2 = st.columns(2)
-            with col_act1:
+            try:
                 doc_file = save_to_word(st.session_state.yandex_text, "yandex_post.docx")
                 if doc_file and os.path.exists(doc_file):
                     with open(doc_file, "rb") as f:
                         st.download_button("📥 Скачать Word", f, file_name="post_yandex.docx", 
                                          mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-            with col_act2:
-                st.code(st.session_state.yandex_text[:500] + ("..." if len(st.session_state.yandex_text) > 500 else ""), language="markdown")
-        else:
-            st.info("Нет текста от YandexGPT")
+            except:
+                pass
     
     with tab2:
         if st.session_state.deepseek_text:
             st.subheader("DeepSeek")
             st.markdown(st.session_state.deepseek_text)
-            
-            col_act1, col_act2 = st.columns(2)
-            with col_act1:
+            try:
                 doc_file = save_to_word(st.session_state.deepseek_text, "deepseek_post.docx")
                 if doc_file and os.path.exists(doc_file):
                     with open(doc_file, "rb") as f:
                         st.download_button("📥 Скачать Word", f, file_name="post_deepseek.docx",
                                          mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-            with col_act2:
-                st.code(st.session_state.deepseek_text[:500] + ("..." if len(st.session_state.deepseek_text) > 500 else ""), language="markdown")
-        else:
-            st.info("Нет текста от DeepSeek")
+            except:
+                pass
     
     with tab3:
-        st.subheader("Предпросмотр в стиле Telegram")
-        
-        if st.session_state.yandex_text and not st.session_state.yandex_text.startswith("❌"):
-            st.markdown("**📨 От YandexGPT:**")
-            preview = st.session_state.yandex_text[:400] + "..." if len(st.session_state.yandex_text) > 400 else st.session_state.yandex_text
-            st.markdown(f"""
-            <div style='background: #f0f2f6; border-radius: 15px; padding: 15px; max-width: 500px; margin: 10px 0;'>
-                <div style='background: white; border-radius: 12px; padding: 15px; font-size: 14px; line-height: 1.5;'>
-                    {preview.replace(chr(10), '<br>')}
-                </div>
-                <div style='text-align: right; color: #666; font-size: 11px; margin-top: 8px;'>
-                    {datetime.now().strftime("%H:%M")}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        if st.session_state.deepseek_text and not st.session_state.deepseek_text.startswith("❌"):
-            st.markdown("**📨 От DeepSeek:**")
-            preview = st.session_state.deepseek_text[:400] + "..." if len(st.session_state.deepseek_text) > 400 else st.session_state.deepseek_text
-            st.markdown(f"""
-            <div style='background: #f0f2f6; border-radius: 15px; padding: 15px; max-width: 500px; margin: 10px 0;'>
-                <div style='background: white; border-radius: 12px; padding: 15px; font-size: 14px; line-height: 1.5;'>
-                    {preview.replace(chr(10), '<br>')}
-                </div>
-                <div style='text-align: right; color: #666; font-size: 11px; margin-top: 8px;'>
-                    {datetime.now().strftime("%H:%M")}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    with tab4:
-        st.subheader("📊 Сравнение моделей")
-        
-        col_c1, col_c2 = st.columns(2)
-        with col_c1:
-            ya_len = len(st.session_state.yandex_text) if st.session_state.yandex_text else 0
-            st.metric("📏 YandexGPT символов", ya_len)
-        with col_c2:
-            ds_len = len(st.session_state.deepseek_text) if st.session_state.deepseek_text else 0
-            st.metric("📏 DeepSeek символов", ds_len)
-        
-        st.markdown("---")
+        st.subheader("📊 Информация")
         st.markdown(f"""
-        **📌 Детали генерации:**
-        - **Тема:** {st.session_state.topic}
-        - **Платформа:** {st.session_state.platform}
-        - **Тон:** {st.session_state.tone}
-        - **Длина:** {text_length_display}
+        **Тема:** {st.session_state.topic}
+        **Платформа:** {st.session_state.platform}
+        **Тон:** {st.session_state.tone}
+        **Длина:** {text_length_display}
         """)
         
-        if st.button("🗑️ Очистить результаты"):
+        if st.button("🗑️ Очистить"):
             st.session_state.generated = False
-            st.session_state.yandex_text = ""
-            st.session_state.deepseek_text = ""
             st.rerun()
 
 # Боковая панель
 with st.sidebar:
     st.markdown("<div class='sidebar-header'><h2>📋 Меню</h2></div>", unsafe_allow_html=True)
     
-    st.write("### ⚙️ Настройки")
-    
-    model_option = st.selectbox(
-        "🤖 Модель ИИ",
-        ["YandexGPT + DeepSeek", "Только YandexGPT", "Только DeepSeek"],
-        key="model_option"
-    )
-    
-    text_length_display = st.selectbox(
-        "📏 Длина текста",
-        ["Менее 300 слов", "300-400 слов", "500-600 слов", "Более 600 слов"],
-        key="text_length_display"
-    )
+    st.selectbox("🤖 Модель ИИ", ["YandexGPT + DeepSeek", "Только YandexGPT", "Только DeepSeek"], key="model_option")
+    st.selectbox("📏 Длина текста", ["Менее 300 слов", "300-400 слов", "500-600 слов", "Более 600 слов"], key="text_length_display")
     
     st.divider()
     
-    st.write("### 📊 Статистика")
-    if os.path.exists("history.csv"):
-        try:
-            df_history = pd.read_csv("history.csv", encoding='utf-8-sig')
-            st.metric("📝 Всего постов", len(df_history))
-        except:
-            st.info("История загружена")
-    else:
-        st.info("📭 История пуста")
-    
-    st.divider()
-    
-    st.write("### 🔐 Статус API")
-    
+    # Проверка ключей
     yandex_key = get_api_key("YANDEX_API_KEY")
     yandex_folder = get_api_key("YANDEX_FOLDER_ID")
     deepseek_key = get_api_key("DEEPSEEK_API_KEY")
     
+    st.write("### 🔐 Статус API")
     if yandex_key and len(yandex_key) > 20:
-        st.success(f"✅ YandexGPT (ключ: {len(yandex_key)} симв.)")
+        st.success("✅ YandexGPT OK")
     else:
-        st.error(f"❌ YandexGPT: ключ {'короткий' if yandex_key else 'отсутствует'} ({len(yandex_key) if yandex_key else 0} симв.)")
+        st.error("❌ YandexGPT")
     
     if yandex_folder and len(yandex_folder) > 5:
-        st.success(f"✅ Folder ID ({len(yandex_folder)} симв.)")
+        st.success("✅ Folder ID OK")
     else:
-        st.error(f"❌ Folder ID: {'короткий' if yandex_folder else 'отсутствует'}")
+        st.error("❌ Folder ID")
     
     if deepseek_key and len(deepseek_key) > 30:
-        st.success(f"✅ DeepSeek (ключ: {len(deepseek_key)} симв.)")
+        st.success("✅ DeepSeek OK")
     else:
-        st.error(f"❌ DeepSeek: ключ {'короткий' if deepseek_key else 'отсутствует'} ({len(deepseek_key) if deepseek_key else 0} симв.)")
+        st.error("❌ DeepSeek")
     
     st.divider()
-    
-    st.write("### ℹ️ О проекте")
-    st.info("Версия 3.2\n\nГенерация постов для семейных каналов")
+    st.info("ИИ-помощник для семейного канала\nВерсия 3.2")
