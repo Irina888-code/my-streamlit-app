@@ -35,9 +35,40 @@ def get_css_styles(theme):
         #MainMenu {visibility: hidden;}
         .stAppDeployButton {display: none;}
         
-        /* Тёмная тема */
+        /* Тёмная тема - основные цвета */
         .stApp {
             background-color: #1a1a2e;
+        }
+        
+        /* Принудительный светлый текст для всего основного контента */
+        .main, .stMarkdown, .stTextArea, .stTextInput, div[data-testid="stMarkdownContainer"] {
+            color: #e2e8f0 !important;
+        }
+        
+        /* Текст в блоках и абзацах */
+        p, h1, h2, h3, h4, h5, h6, span, div, .stAlert, .stInfo, .stSuccess, .stWarning, .stError {
+            color: #e2e8f0 !important;
+        }
+        
+        /* Карточки и контейнеры с текстом */
+        .stTabs [data-baseweb="tab-panel"] {
+            background-color: transparent;
+            color: #e2e8f0 !important;
+        }
+        
+        /* Текст внутри вкладок */
+        .stTabs [data-baseweb="tab-panel"] p,
+        .stTabs [data-baseweb="tab-panel"] div:not(.stButton) {
+            color: #e2e8f0 !important;
+        }
+        
+        /* Предпросмотр Telegram в тёмной теме */
+        div[style*="background: #E7EBF0"] {
+            background: #2d2d44 !important;
+        }
+        div[style*="background: white"] {
+            background: #16213e !important;
+            color: #e2e8f0 !important;
         }
         
         /* ГРАДИЕНТНЫЙ ЗАГОЛОВОК */
@@ -55,7 +86,7 @@ def get_css_styles(theme):
         /* СТИЛЬ ДЛЯ ПОДЗАГОЛОВКА */
         .subtitle {
             text-align: center;
-            color: #a78bfa;
+            color: #a78bfa !important;
             font-size: 1.2em;
             margin-bottom: 30px;
             font-weight: 500;
@@ -68,7 +99,7 @@ def get_css_styles(theme):
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             margin: 10px 0;
             border-left: 5px solid #667eea;
-            color: #e2e8f0;
+            color: #e2e8f0 !important;
         }
         
         .stButton>button {
@@ -112,6 +143,39 @@ def get_css_styles(theme):
         .stTabs [data-baseweb="tab"] {
             border-radius: 8px;
             padding: 8px 16px;
+            color: #e2e8f0 !important;
+        }
+        
+        /* Метрики в тёмной теме */
+        [data-testid="stMetricValue"] {
+            color: #a78bfa !important;
+        }
+        
+        /* Инфо блоки */
+        .stInfo, .stAlert {
+            background-color: #16213e !important;
+            color: #e2e8f0 !important;
+        }
+        
+        /* Dataframe таблицы */
+        .stDataFrame, .dataframe {
+            color: #e2e8f0 !important;
+        }
+        .stDataFrame table, .dataframe table {
+            color: #e2e8f0 !important;
+        }
+        .stDataFrame th, .dataframe th {
+            background-color: #0f0c29 !important;
+            color: #a78bfa !important;
+        }
+        .stDataFrame td, .dataframe td {
+            background-color: #16213e !important;
+            color: #e2e8f0 !important;
+        }
+        
+        /* Код блоки */
+        .stCodeBlock {
+            background-color: #0f0c29 !important;
         }
         </style>
         """
@@ -363,12 +427,12 @@ if "yandex_text" in st.session_state:
         st.subheader("Предпросмотр Telegram")
         st.markdown("### От YandexGPT:")
         yandex_preview = st.session_state.yandex_text[:500] + "..." if len(st.session_state.yandex_text) > 500 else st.session_state.yandex_text
-        preview_html_ya = "<div style='background: #E7EBF0; border-radius: 15px; padding: 15px; max-width: 400px;'><div style='background: white; border-radius: 12px; padding: 12px 15px; font-size: 14px; line-height: 1.5; color: #000;'>" + yandex_preview.replace(chr(10), "<br>") + "</div><div style='text-align: right; color: #888; font-size: 11px;'>" + datetime.now().strftime("%H:%M") + "</div></div>"
+        preview_html_ya = "<div style='background: #E7EBF0; border-radius: 15px; padding: 15px; max-width: 400px;'><div style='background: white; border-radius: 12px; padding: 12px 15px; font-size: 14px; line-height: 1.5;'>" + yandex_preview.replace(chr(10), "<br>") + "</div><div style='text-align: right; color: #888; font-size: 11px;'>" + datetime.now().strftime("%H:%M") + "</div></div>"
         st.markdown(preview_html_ya, unsafe_allow_html=True)
         
         st.markdown("### От DeepSeek:")
         deepseek_preview = st.session_state.deepseek_text[:500] + "..." if len(st.session_state.deepseek_text) > 500 else st.session_state.deepseek_text
-        preview_html_ds = "<div style='background: #E7EBF0; border-radius: 15px; padding: 15px; max-width: 400px;'><div style='background: white; border-radius: 12px; padding: 12px 15px; font-size: 14px; line-height: 1.5; color: #000;'>" + deepseek_preview.replace(chr(10), "<br>") + "</div><div style='text-align: right; color: #888; font-size: 11px;'>" + datetime.now().strftime("%H:%M") + "</div></div>"
+        preview_html_ds = "<div style='background: #E7EBF0; border-radius: 15px; padding: 15px; max-width: 400px;'><div style='background: white; border-radius: 12px; padding: 12px 15px; font-size: 14px; line-height: 1.5;'>" + deepseek_preview.replace(chr(10), "<br>") + "</div><div style='text-align: right; color: #888; font-size: 11px;'>" + datetime.now().strftime("%H:%M") + "</div></div>"
         st.markdown(preview_html_ds, unsafe_allow_html=True)
     
     with tab4:
